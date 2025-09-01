@@ -2,20 +2,27 @@
 session_start();
 include("../../DB/conn_db.php");
 
+// Block access if not logged in
+if (!isset($_SESSION['user_id'])) {
+    header("Location: ../../index.php");
+    exit;
+}
+
 try {
-    // Get search parameter - XSS vulnerable
-    $search = isset($_GET['search']) ? $_GET['search'] : '';
-    if ($search) {
-        $sql_query = "SELECT * FROM users WHERE User_Name LIKE '%$search%' OR User_ LIKE '%$search%'";
+    if (!empty($_GET['search'])) {
+        $search = "%" . $_GET['search'] . "%";
+        $sql_query = "SELECT * FROM users WHERE User_Name LIKE :search";
+        $stmt = $db_connect->prepare($sql_query);
+        $stmt->bindParam(":search", $search, PDO::PARAM_STR);
     } else {
         $sql_query = "SELECT * FROM users";
+        $stmt = $db_connect->prepare($sql_query);
     }
 
-    $stmt = $db_connect->prepare($sql_query);
     $stmt->execute();
     $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (\PDOException $e) {
-    die("Database Error:" . $e->getMessage());
+    die("Database Error: " . htmlspecialchars($e->getMessage()));
 }
 ?>
 <!DOCTYPE html>
@@ -23,35 +30,40 @@ try {
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Dashboard</title>
 </head>
 
 <body>
     <h1>Welcome</h1>
-    <p><b>User ID:</b> <?php echo $_SESSION['user_id']; ?></p>
-    <p><b>Email:</b> <?php echo $_SESSION['user_email']; ?></p>
-    <p><b>Name:</b> <?php echo $_SESSION['user_name']; ?></p>
+
+    <p><b>User ID:</b> <?= htmlspecialchars($_SESSION['user_id']) ?></p>
+    <p><b>User Email:</b> <?= htmlspecialchars($_SESSION['user_email']) ?></p>
+    <p><b>User Name:</b> <?= htmlspecialchars($_SESSION['user_name']) ?></p>
+
+    <a href="../../logout.php">Logout</a>
+
     <form method="GET">
         <input type="text" name="search" placeholder="Search users..."
-            value="<?php echo $search; ?>" class="search-box">
-        <button type="submit" class="btn" style="width: auto; margin-left: 10px;">Search</button>
+            value="<?= isset($_GET['search']) ? htmlspecialchars($_GET['search']) : '' ?>">
+        <button type="submit">Search</button>
     </form>
-    <table>
+
+    <table style="margin-top:10px;" border="1">
         <thead>
-            <th>Users_id</th>
-            <th>Users_name</th>
-            <th>Users_email</th>
+            <tr>
+                <th>User_Id</th>
+                <th>User_Name</th>
+                <th>User_Email</th>
+            </tr>
         </thead>
         <tbody>
             <?php foreach ($students as $student): ?>
                 <tr>
-                    <td><?php echo $student['User_Id'] ?></td>
-                    <td><?php echo $student['User_Name'] ?></td>
-                    <td><?php echo $student['User_Email'] ?></td>
+                    <td><?= htmlspecialchars($student['User_Id']) ?></td>
+                    <td><?= htmlspecialchars($student['User_Name']) ?></td>
+                    <td><?= htmlspecialchars($student['User_Email']) ?></td>
                 </tr>
             <?php endforeach; ?>
-
         </tbody>
     </table>
 </body>

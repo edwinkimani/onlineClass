@@ -7,6 +7,6 @@ $user_table = "CREATE TABLE IF NOT EXISTS users (
 );";
 
 $tables = [
-    $user_table
+    $user_table,
 ];
 ?>
